@@ -1,7 +1,8 @@
 //use std::old_io::net::tcp::TcpStream;
-use std::net::TcpStream;
+use mio::tcp::TcpStream;
 use std::io::BufReader;
 use std::io::BufWriter;
+use std::net::{ToSocketAddrs,SocketAddr};
 use frame::Transmission;
 use std::io::Result;
 use std::io::Error;
@@ -11,8 +12,7 @@ use std::cmp::max;
 use header::{self, StompHeaderSet};
 
 pub struct Connection {
-  pub ip_address : String,
-  pub port: u16,
+  pub addr: SocketAddr,
   pub tcp_stream : TcpStream
 }
 
@@ -24,10 +24,10 @@ pub struct Credentials<'a>(pub &'a str, pub &'a str);
 impl Connection {
 
   pub fn new(ip_address: &str, port: u16) -> Result<Connection> {
-    let tcp_stream = try!(TcpStream::connect((ip_address, port)));
+    let addr = try!((ip_address, port).to_socket_addrs()).next().expect("a socket address");
+    let tcp_stream = try!(TcpStream::connect(&addr));
     Ok(Connection {
-      ip_address: ip_address.to_string(),
-      port: port,
+      addr: addr,
       tcp_stream: tcp_stream
     })
   }

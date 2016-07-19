@@ -27,7 +27,7 @@ use message_builder::MessageBuilder;
 use subscription_builder::SubscriptionBuilder;
 use frame_buffer::FrameBuffer;
 
-use mio::{EventLoop, Handler, Token, ReadHint, Timeout};
+use mio::{EventLoop, Handler, Token, EventSet, PollOpt, Timeout};
 
 pub trait FrameHandler {
   fn on_frame(&mut self, &Frame);
@@ -120,7 +120,7 @@ impl <'a> Handler for Session<'a> {
     }
   }
 
-  fn readable(&mut self, event_loop: &mut EventLoop<Session<'a>>, _token: Token, _: ReadHint) {
+  fn ready(&mut self, event_loop: &mut EventLoop<Session<'a>>, _token: Token, _: EventSet) {
     debug!("Readable! Buffer size: {}", &mut self.read_buffer.len());
     debug!("Frame buffer length: {}", &mut self.frame_buffer.len());
     let bytes_read = match self.connection.tcp_stream.read(self.read_buffer.deref_mut()){
@@ -202,7 +202,9 @@ impl <'a> Session <'a> {
           mem::replace(self, session);
           self.error_callback = error_callback;
           self.subscriptions = subscriptions;
-          event_loop.register(&self.connection.tcp_stream, Token(0)).ok().expect("Couldn't register re-established connection with the event loop.");
+          event_loop.register(&self.connection.tcp_stream, Token(0),
+                  EventSet::readable(), PollOpt::edge()).ok()
+              .expect("Couldn't register re-established connection with the event loop.");
           self.register_rx_heartbeat_timeout(event_loop);
           self.reset_rx_heartbeat_timeout(event_loop);
           info!("Resubscribing to {} destinations", self.subscriptions.len());
@@ -444,7 +446,8 @@ impl <'a> Session <'a> {
 
   pub fn listen(&mut self) -> Result<()> {
     let mut event_loop : EventLoop<Session<'a>> = EventLoop::new().unwrap();
-    let _ = event_loop.register(&self.connection.tcp_stream, Token(0));
+    try!(event_loop.register(&self.connection.tcp_stream, Token(0),
+                  EventSet::readable(), PollOpt::edge()));
     self.register_tx_heartbeat_timeout(&mut event_loop);
     self.register_rx_heartbeat_timeout(&mut event_loop);
     event_loop.run(self)
