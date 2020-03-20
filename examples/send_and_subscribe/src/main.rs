@@ -8,7 +8,7 @@ use stomp::connection::{HeartBeat, Credentials};
 use stomp::session::ReceiptHandler;
 
 fn main() {
-  env_logger::init().unwrap();
+  env_logger::init();
 
   let destination = "/topic/messages";
   let mut message_count: u64 = 0;

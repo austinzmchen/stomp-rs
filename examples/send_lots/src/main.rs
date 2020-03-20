@@ -11,7 +11,7 @@ const TOTAL_MESSAGES : u64 = 10_000;
 const INTERVAL : u64 = 1000;
 
 fn main() {
-  env_logger::init().unwrap();
+  env_logger::init();
 
   let destination = "/queue/sullivan";
   let mut messages_received: u64 = 0;
